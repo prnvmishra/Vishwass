@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+pymupdf
+pytesseract
+Pillow
+openai
+python-multipart
+python-dotenv
+pydantic
+sqlalchemy
+wikipedia
+pdfplumber
+opencv-python
+googlesearch-python
+duckduckgo-search
+spacy
