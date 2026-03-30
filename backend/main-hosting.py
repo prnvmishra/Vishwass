@@ -164,6 +164,10 @@ async def analyze_offer_lightweight(text: str, filename: str) -> dict:
     
     # OpenRouter AI Analysis
     llm_analysis = "Basic analysis - AI unavailable"
+    ai_company = ""
+    ai_role = ""
+    ai_salary = ""
+    
     try:
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         if openrouter_key and len(text.strip()) > 20:
@@ -189,11 +193,23 @@ async def analyze_offer_lightweight(text: str, filename: str) -> dict:
                     ai_result = response.json()
                     llm_analysis = ai_result["choices"][0]["message"]["content"]
                     
-                    # Update risk score based on AI analysis
-                    if "high risk" in llm_analysis.lower():
-                        risk_score = max(risk_score, 70)
-                    elif "medium risk" in llm_analysis.lower():
-                        risk_score = max(risk_score, 40)
+                    # Parse AI response for better extraction
+                    try:
+                        import json
+                        ai_data = json.loads(llm_analysis)
+                        ai_company = ai_data.get("company_name", "")
+                        ai_role = ai_data.get("role", "")
+                        ai_salary = ai_data.get("salary", "")
+                        
+                        # Update risk score based on AI analysis
+                        if ai_data.get("risk_score", 0) > 70:
+                            risk_score = ai_data["risk_score"]
+                            risk_level = "High Risk"
+                        elif ai_data.get("risk_score", 0) > 40:
+                            risk_score = ai_data["risk_score"]
+                            risk_level = "Medium Risk"
+                    except:
+                        pass
     except Exception as e:
         print(f"OpenRouter error: {e}")
         llm_analysis = "AI analysis failed - using basic rules"
@@ -209,10 +225,10 @@ async def analyze_offer_lightweight(text: str, filename: str) -> dict:
         "score": risk_score,
         "risk_level": risk_level,
         "extracted_data": {
-            "company_name": company,
+            "company_name": ai_company if ai_company else company,
             "hr_email": email,
-            "salary": salary,
-            "role": role,
+            "salary": ai_salary if ai_salary else salary,
+            "role": ai_role if ai_role else role,
             "website": ""
         },
         "reasons": reasons,
