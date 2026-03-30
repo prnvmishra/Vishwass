@@ -21,15 +21,25 @@ def parse_document_lightweight(text: str, filename: str) -> str:
     if filename.lower().endswith('.txt'):
         return text.decode('utf-8', errors='ignore') if isinstance(text, bytes) else text
     elif filename.lower().endswith('.pdf'):
-        # For PDF, try simple text extraction or return sample
+        # Try to extract PDF text using pypdf2
         try:
-            # Try to decode as text first
-            if isinstance(text, bytes):
-                decoded_text = text.decode('utf-8', errors='ignore')
-                if len(decoded_text.strip()) > 50:  # If we got meaningful text
-                    return decoded_text
-        except:
-            pass
+            import PyPDF2
+            import io
+            
+            # Create PDF reader from bytes
+            pdf_stream = io.BytesIO(text)
+            pdf_reader = PyPDF2.PdfReader(pdf_stream)
+            
+            # Extract text from all pages
+            extracted_text = ""
+            for page in pdf_reader.pages:
+                extracted_text += page.extract_text() + "\n"
+            
+            if len(extracted_text.strip()) > 50:
+                return extracted_text
+        except Exception as e:
+            print(f"PDF extraction error: {e}")
+        
         # Fallback to sample text if PDF parsing fails
         return f"""
         We are pleased to offer you the role of Software Engineer at {filename.replace('.pdf', '').title()}.
