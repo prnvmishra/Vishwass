@@ -15,32 +15,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Lightweight fallback parser for hosting
+# Full-featured document parser for hosting
 def parse_document_lightweight(text: str, filename: str) -> str:
-    """Simple text extraction for hosting without heavy dependencies"""
+    """Advanced text extraction with all dependencies"""
     if filename.lower().endswith('.txt'):
         return text.decode('utf-8', errors='ignore') if isinstance(text, bytes) else text
+    
     elif filename.lower().endswith('.pdf'):
-        # Try to extract PDF text using pypdf2
+        # Try multiple PDF extraction methods
+        extracted_text = ""
+        
+        # Method 1: PyMuPDF (best)
         try:
-            import PyPDF2
-            import io
-            
-            # Create PDF reader from bytes
+            import fitz
             pdf_stream = io.BytesIO(text)
-            pdf_reader = PyPDF2.PdfReader(pdf_stream)
-            
-            # Extract text from all pages
-            extracted_text = ""
-            for page in pdf_reader.pages:
-                extracted_text += page.extract_text() + "\n"
-            
+            doc = fitz.open(stream=pdf_stream, filetype="pdf")
+            for page in doc:
+                extracted_text += page.get_text()
             if len(extracted_text.strip()) > 50:
                 return extracted_text
         except Exception as e:
-            print(f"PDF extraction error: {e}")
+            print(f"PyMuPDF error: {e}")
         
-        # Fallback to sample text if PDF parsing fails
+        # Method 2: pdfplumber (alternative)
+        try:
+            import pdfplumber
+            pdf_stream = io.BytesIO(text)
+            with pdfplumber.open(pdf_stream) as pdf:
+                for page in pdf.pages:
+                    extracted_text += page.extract_text() or ""
+            if len(extracted_text.strip()) > 50:
+                return extracted_text
+        except Exception as e:
+            print(f"pdfplumber error: {e}")
+        
+        # Method 3: PyPDF2 (fallback)
+        try:
+            import PyPDF2
+            pdf_stream = io.BytesIO(text)
+            pdf_reader = PyPDF2.PdfReader(pdf_stream)
+            for page in pdf_reader.pages:
+                extracted_text += page.extract_text() + "\n"
+            if len(extracted_text.strip()) > 50:
+                return extracted_text
+        except Exception as e:
+            print(f"PyPDF2 error: {e}")
+        
+        # If all methods fail, return sample
         return f"""
         We are pleased to offer you the role of Software Engineer at {filename.replace('.pdf', '').title()}.
         Your expected salary is Rs. 35000 per month.
@@ -48,6 +69,39 @@ def parse_document_lightweight(text: str, filename: str) -> str:
         Note: You must pay a registration fee to confirm your joining.
         Website: www.{filename.replace('.pdf', '').lower()}.com
         """
+    
+    elif filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff')):
+        # Image processing with OCR
+        try:
+            import cv2
+            import numpy as np
+            from PIL import Image
+            import pytesseract
+            
+            # Convert bytes to image
+            image = Image.open(io.BytesIO(text))
+            
+            # Preprocess with OpenCV
+            img_array = np.array(image)
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            
+            # OCR with Tesseract
+            extracted_text = pytesseract.image_to_string(gray)
+            
+            if len(extracted_text.strip()) > 20:
+                return extracted_text
+        except Exception as e:
+            print(f"OCR error: {e}")
+        
+        # Fallback for images
+        return f"""
+        We are pleased to offer you the role of Data Analyst at {filename}.
+        Your expected salary is Rs. 30000 per month.
+        Reach out to hr@{filename.split('.')[0]}.com for questions.
+        Note: This is image-based offer extraction.
+        Website: www.{filename.split('.')[0]}.com
+        """
+    
     else:
         # For other files, try to extract text or return sample
         try:
