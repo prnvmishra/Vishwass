@@ -150,12 +150,16 @@ async def analyze_offer_lightweight(text: str, filename: str) -> dict:
         risk_score += 40
         reasons.append("Suspicious phrases detected")
     
-    # Extract actual company name (simple regex)
-    company_match = re.search(r'(?:offer from|at|joining)\s+([A-Z][a-zA-Z\s&\.\-]+)', text, re.IGNORECASE)
+    # Extract actual company name (better regex)
+    company_match = re.search(r'role of\s+[A-Za-z\s]+at\s+([A-Za-z\s&\.\-]+)', text, re.IGNORECASE)
+    if not company_match:
+        company_match = re.search(r'at\s+([A-Za-z\s&\.\-]+)', text, re.IGNORECASE)
     company = company_match.group(1).strip() if company_match else "Unknown Company"
     
-    # Extract actual role
-    role_match = re.search(r'(?:role of|position)\s+([A-Za-z\s]+)', text, re.IGNORECASE)
+    # Extract actual role (better regex)
+    role_match = re.search(r'role of\s+([A-Za-z\s]+)\s+at', text, re.IGNORECASE)
+    if not role_match:
+        role_match = re.search(r'role of\s+([A-Za-z\s]+)', text, re.IGNORECASE)
     role = role_match.group(1).strip() if role_match else "Unknown Role"
     
     # OpenRouter AI Analysis
