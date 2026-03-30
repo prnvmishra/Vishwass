@@ -1,0 +1,16 @@
+# Lightweight requirements for hosting
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pydantic
+httpx
+wikipedia
+# Remove heavy dependencies for hosting
+# opencv-python-headless
+# pytesseract  
+# pymupdf
+# pdfplumber
+# spacy
+# googlesearch-python
+# duckduckgo-search

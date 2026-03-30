@@ -16,7 +16,8 @@ export default function SearchCompany() {
       if(!query) return;
       setLoading(true);
       try {
-         const res = await axios.get(`http://localhost:8000/company/${encodeURIComponent(query)}`);
+         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+         const res = await axios.get(`${API_URL}/company/${encodeURIComponent(query)}`);
          const data = res.data;
 
          // Cross-reference community flags from Firebase

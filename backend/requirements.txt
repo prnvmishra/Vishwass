@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pymupdf
 pytesseract
 Pillow
@@ -10,7 +10,8 @@ pydantic
 sqlalchemy
 wikipedia
 pdfplumber
-opencv-python
+opencv-python-headless
 googlesearch-python
 duckduckgo-search
 spacy
+httpx
