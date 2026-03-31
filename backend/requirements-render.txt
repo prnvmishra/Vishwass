@@ -23,8 +23,10 @@ sqlalchemy==2.0.23
 python-dotenv==1.0.0
 pydantic==2.5.0
 
-# NLP (Lightweight)
+# NLP & OCR
 spacy==3.7.2
+pytesseract==0.3.10
+Pillow==10.0.0
 
 # Additional dependencies for full functionality
 aiofiles==25.1.0

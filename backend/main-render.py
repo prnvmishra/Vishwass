@@ -131,6 +131,20 @@ def parse_document_render(file_bytes: bytes, filename: str) -> str:
                                         extracted_text += "\n" + texts[0].description
                                 except Exception as e:
                                     print(f"Google Vision OCR error: {e}")
+                            else:
+                                # Fallback: Try to extract basic text from image using OCR library if available
+                                try:
+                                    import pytesseract
+                                    import PIL.Image
+                                    import io
+                                    img_pil = PIL.Image.open(io.BytesIO(img_data))
+                                    ocr_text = pytesseract.image_to_string(img_pil)
+                                    if ocr_text.strip():
+                                        extracted_text += "\n" + ocr_text.strip()
+                                except ImportError:
+                                    print("Tesseract not available for OCR fallback")
+                                except Exception as e:
+                                    print(f"Tesseract OCR error: {e}")
                         
                         pix = None  # Free memory
                     except Exception as e:
