@@ -1,11 +1,14 @@
+# Core imports
 import os
-import json
-import asyncio
-import io
 import re
+import json
+import io
+import asyncio
+from typing import Optional, Dict
+import httpx
+import spacy
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
 
 # Document Processing
 import fitz  # PyMuPDF
