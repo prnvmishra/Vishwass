@@ -251,6 +251,10 @@ export default function Home() {
                     <span className="text-xs text-slate-400 uppercase tracking-wider">HR Email</span>
                     <p className="font-medium text-blue-400 text-lg mt-1 truncate">{result.extracted_data.hr_email || 'N/A'}</p>
                   </div>
+                  <div className="glass-panel p-4 flex flex-col justify-center md:col-span-2">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider">Website</span>
+                    <p className="font-medium text-green-400 text-lg mt-1 truncate">{result.extracted_data.website || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
             </div>

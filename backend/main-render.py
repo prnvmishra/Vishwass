@@ -185,7 +185,22 @@ async def analyze_document_render(text: str, filename: str) -> dict:
     
     # Enhanced regex patterns for extraction
     email_match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
-    email = email_match.group(0) if email_match else ""
+    all_emails = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
+    
+    # Prioritize HR-specific emails
+    email = ""
+    if all_emails:
+        # Look for HR-specific emails first
+        hr_keywords = ['hr', 'human', 'resource', 'recruit', 'career', 'talent', 'hiring']
+        for found_email in all_emails:
+            email_prefix = found_email.split('@')[0].lower()
+            if any(keyword in email_prefix for keyword in hr_keywords):
+                email = found_email
+                break
+        
+        # If no HR email found, use the first email
+        if not email:
+            email = all_emails[0]
     
     # Multiple salary patterns
     salary_patterns = [
