@@ -363,9 +363,16 @@ async def analyze_document_render(text: str, filename: str) -> dict:
         "linkedin_jobs": linkedin_jobs
     }
 
-# Company intelligence
+# Simple cache for company intelligence
+company_cache = {}
+
+# Company intelligence (optimized for speed)
 async def get_company_intelligence_render(name: str) -> dict:
-    """Company analysis optimized for Render"""
+    """Fast company analysis optimized for Render"""
+    
+    # Check cache first
+    if name in company_cache:
+        return company_cache[name]
     
     intelligence = {
         "size": "Unknown",
@@ -378,31 +385,40 @@ async def get_company_intelligence_render(name: str) -> dict:
         "summary": "No information available"
     }
     
-    # Wikipedia search
+    # Fast Wikipedia search (timeout 3 seconds)
     try:
-        wiki_results = wikipedia.search(name, results=1)
+        import asyncio
+        wiki_results = await asyncio.wait_for(
+            asyncio.to_thread(wikipedia.search, name, results=1),
+            timeout=3.0
+        )
         if wiki_results:
-            summary = wikipedia.summary(wiki_results[0], sentences=3)
+            summary = await asyncio.wait_for(
+                asyncio.to_thread(wikipedia.summary, wiki_results[0], sentences=2),
+                timeout=3.0
+            )
             intelligence["summary"] = summary
-    except:
-        pass
+    except asyncio.TimeoutError:
+        print("Wikipedia search timed out")
+    except Exception as e:
+        print(f"Wikipedia error: {e}")
     
-    # Google search (lightweight)
-    try:
-        search_results = googlesearch.search(f"{name} company official website", num_results=2)
-        if search_results:
-            intelligence["official_website"] = search_results[0]
-    except:
-        pass
+    # Fast web search with timeout (only if no Wikipedia result)
+    if intelligence["summary"] == "No information available":
+        try:
+            search_results = await asyncio.wait_for(
+                asyncio.to_thread(googlesearch.search, f"{name} company official website", num_results=1),
+                timeout=5.0
+            )
+            if search_results:
+                intelligence["official_website"] = search_results[0]
+        except asyncio.TimeoutError:
+            print("Google search timed out")
+        except Exception as e:
+            print(f"Google search error: {e}")
     
-    # DuckDuckGo search
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(f"{name} company information", max_results=2))
-            if results:
-                intelligence["summary"] = results[0]["body"]
-    except:
-        pass
+    # Cache the result
+    company_cache[name] = intelligence
     
     return intelligence
 
