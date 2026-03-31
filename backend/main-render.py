@@ -258,6 +258,7 @@ async def analyze_document_render(text: str, filename: str) -> dict:
             print(f"NLP error: {e}")
     
     # Enhanced role extraction
+    role = "Unknown"  # Initialize role variable
     role_patterns = [
         r'(?:role|position)\s+(?:of|as)\s+([A-Za-z\s]+)',
         r'hiring\s+(?:for|a)\s+([A-Za-z\s]+)',
