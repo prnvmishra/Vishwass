@@ -330,13 +330,18 @@ async def analyze_document_render(text: str, filename: str) -> dict:
     
     try:
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        print(f"OpenRouter key found: {bool(openrouter_key)}")
+        print(f"Text length: {len(text.strip())}")
+        
         if openrouter_key and len(text.strip()) > 20:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
                         "Authorization": f"Bearer {openrouter_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://vishwass.onrender.com",
+                        "X-Title": "VISHWAS Job Analyzer"
                     },
                     json={
                         "model": "openai/gpt-3.5-turbo",
@@ -349,9 +354,12 @@ async def analyze_document_render(text: str, filename: str) -> dict:
                     }
                 )
                 
+                print(f"OpenRouter response status: {response.status_code}")
+                
                 if response.status_code == 200:
                     ai_result = response.json()
                     ai_analysis = ai_result["choices"][0]["message"]["content"]
+                    print(f"AI Analysis: {ai_analysis}")
                     
                     # Parse AI response
                     try:
@@ -366,9 +374,11 @@ async def analyze_document_render(text: str, filename: str) -> dict:
                             salary = ai_data["salary"]
                     except:
                         pass
+                else:
+                    print(f"OpenRouter error: {response.text}")
     except Exception as e:
         print(f"AI analysis error: {e}")
-        ai_analysis = "AI analysis failed"
+        ai_analysis = f"AI analysis failed: {str(e)}"
     
     # Email validation with IPQS
     ipqs_intel = None
