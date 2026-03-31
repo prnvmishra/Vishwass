@@ -98,15 +98,28 @@ def parse_document_render(file_bytes: bytes, filename: str) -> str:
     elif filename.lower().endswith('.pdf'):
         extracted_text = ""
         
-        # Method 1: PyMuPDF with OCR for images
+        # Method 1: PyMuPDF with enhanced extraction
         try:
             pdf_stream = io.BytesIO(file_bytes)
             doc = fitz.open(stream=pdf_stream, filetype="pdf")
             
             for page_num, page in enumerate(doc):
-                # Extract text from page
+                # Extract text with multiple methods
                 page_text = page.get_text()
                 extracted_text += page_text
+                
+                # Try different text extraction options
+                if len(page_text.strip()) < 50:
+                    # Try with different extraction flags
+                    page_text = page.get_text(textflags=fitz.TEXTFLAGS_TEXT)
+                    extracted_text += page_text
+                    
+                    if len(page_text.strip()) < 50:
+                        # Try with words extraction
+                        words = page.get_text("words")
+                        if words:
+                            word_text = " ".join([w[4] for w in words])
+                            extracted_text += word_text
                 
                 # Extract images and perform OCR if needed
                 image_list = page.get_images(full=True)
@@ -165,6 +178,21 @@ def parse_document_render(file_bytes: bytes, filename: str) -> str:
                 return extracted_text
         except Exception as e:
             print(f"PyPDF2 error: {e}")
+        
+        # Method 3: Try to extract any readable text from PDF metadata
+        try:
+            import pdfplumber
+            pdf_stream = io.BytesIO(file_bytes)
+            with pdfplumber.open(pdf_stream) as pdf:
+                for page in pdf.pages:
+                    if page.extract_text():
+                        extracted_text += page.extract_text() + "\n"
+                if len(extracted_text.strip()) > 50:
+                    return extracted_text
+        except ImportError:
+            print("pdfplumber not available")
+        except Exception as e:
+            print(f"pdfplumber error: {e}")
         
         return f"Unable to extract text from PDF: {filename}"
     
