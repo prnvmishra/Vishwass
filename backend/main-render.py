@@ -233,6 +233,7 @@ async def analyze_document_render(text: str, filename: str) -> dict:
             break
     
     # Enhanced company name extraction
+    company_name = "Unknown"  # Initialize company_name variable
     company_patterns = [
         r'([A-Z][a-zA-Z\s&]+(?:Private\s+Limited|Ltd\.?|LLC|Inc\.?|Corp\.?|Corporation))',
         r'([A-Z][a-zA-Z\s&]+(?:Technologies|Solutions|Systems|Services|Global))',
