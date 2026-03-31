@@ -273,8 +273,8 @@ export default function Home() {
                     </div>
                     <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
                         <p className="text-xs text-slate-400 uppercase">Disposable Email</p>
-                        <p className={`text-xl font-bold mt-1 ${result.ipqs_intel.is_disposable ? 'text-red-500' : 'text-slate-300'}`}>
-                           {result.ipqs_intel.is_disposable ? "YES" : "NO"}
+                        <p className={`text-xl font-bold mt-1 ${result.ipqs_intel.disposable ? 'text-red-500' : 'text-slate-300'}`}>
+                           {result.ipqs_intel.disposable ? "YES" : "NO"}
                         </p>
                     </div>
                     <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
@@ -303,13 +303,13 @@ export default function Home() {
                     <Briefcase className="w-24 h-24 text-blue-500" />
                  </div>
                  <h3 className="text-xl font-bold mb-4 text-white flex items-center gap-2">
-                    <Briefcase className={`${result.linkedin_jobs.has_active_listings ? 'text-green-500' : 'text-red-500'} w-6 h-6`} /> Global Job Verification (JSearch)
+                    <Briefcase className={`${result.linkedin_jobs.has_jobs ? 'text-green-500' : 'text-red-500'} w-6 h-6`} /> Global Job Verification (JSearch)
                  </h3>
                  <div className="relative z-10 flex items-center gap-4">
                     <div className="bg-slate-900/50 p-4 rounded-xl border border-white/5 w-full max-w-lg">
                         <p className="text-xs text-slate-400 uppercase">Active Role Match Status</p>
-                        <p className={`text-lg font-bold mt-1 ${result.linkedin_jobs.has_active_listings ? 'text-green-500' : 'text-red-500'}`}>
-                           {result.linkedin_jobs.message}
+                        <p className={`text-lg font-bold mt-1 ${result.linkedin_jobs.has_jobs ? 'text-green-500' : 'text-red-500'}`}>
+                           {result.linkedin_jobs.has_jobs ? `${result.linkedin_jobs.count} jobs found` : 'No active job listings found'}
                         </p>
                     </div>
                  </div>
@@ -336,7 +336,9 @@ export default function Home() {
                     <div className="mt-6 p-5 rounded-2xl bg-blue-900/20 border border-blue-500/20 relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
                       <h4 className="text-sm font-semibold text-blue-300 mb-2 uppercase tracking-wide">AI Agent Reasoning</h4>
-                      <p className="text-sm text-blue-100/90 leading-relaxed">{result.llm_analysis}</p>
+                      <p className="text-sm text-blue-100/90 leading-relaxed">
+                        {typeof result.llm_analysis === 'string' ? result.llm_analysis : JSON.stringify(result.llm_analysis)}
+                      </p>
                     </div>
                   )}
                 </div>
