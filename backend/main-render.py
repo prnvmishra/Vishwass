@@ -98,18 +98,50 @@ def parse_document_render(file_bytes: bytes, filename: str) -> str:
     elif filename.lower().endswith('.pdf'):
         extracted_text = ""
         
-        # Method 1: PyMuPDF
+        # Method 1: PyMuPDF with OCR for images
         try:
             pdf_stream = io.BytesIO(file_bytes)
             doc = fitz.open(stream=pdf_stream, filetype="pdf")
-            for page in doc:
-                extracted_text += page.get_text()
+            
+            for page_num, page in enumerate(doc):
+                # Extract text from page
+                page_text = page.get_text()
+                extracted_text += page_text
+                
+                # Extract images and perform OCR if needed
+                image_list = page.get_images(full=True)
+                
+                for img_index, img in enumerate(image_list):
+                    try:
+                        # Get image data
+                        xref = img[0]
+                        pix = fitz.Pixmap(doc, xref)
+                        
+                        if pix.n - pix.alpha < 4:  # Check if not CMYK
+                            img_data = pix.tobytes("png")
+                            
+                            # Use Google Vision for OCR on image
+                            if vision_client:
+                                try:
+                                    from google.cloud.vision import types
+                                    image = types.Image(content=img_data)
+                                    response = vision_client.text_detection(image=image)
+                                    texts = response.text_annotations
+                                    if texts:
+                                        extracted_text += "\n" + texts[0].description
+                                except Exception as e:
+                                    print(f"Google Vision OCR error: {e}")
+                        
+                        pix = None  # Free memory
+                    except Exception as e:
+                        print(f"Image extraction error: {e}")
+            
             if len(extracted_text.strip()) > 50:
                 return extracted_text
         except Exception as e:
             print(f"PyMuPDF error: {e}")
         
-        # Method 2: PyPDF2
+        # Method 2: PyPDF2 (fallback)
         try:
             pdf_stream = io.BytesIO(file_bytes)
             pdf_reader = PyPDF2.PdfReader(pdf_stream)
@@ -151,37 +183,82 @@ def parse_document_render(file_bytes: bytes, filename: str) -> str:
 async def analyze_document_render(text: str, filename: str) -> dict:
     """Analysis optimized for Render free tier"""
     
-    # Basic regex extraction
+    # Enhanced regex patterns for extraction
     email_match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
     email = email_match.group(0) if email_match else ""
     
-    salary_match = re.search(r'(?:Rs\.?|₹|INR|\$)\s*([\d,\.]+)', text)
-    salary = salary_match.group(1) if salary_match else ""
+    # Multiple salary patterns
+    salary_patterns = [
+        r'(?:Rs\.?|₹|INR)\s*([\d,\.]+)\s*(?:per\s*month|monthly|annually|per\s*year|yearly)?',
+        r'\$?\s*([\d,\.]+)\s*(?:per\s*month|monthly|annually|per\s*year|yearly|USD|per\s*annum)',
+        r'salary[:\s]*([\d,\.]+)',
+        r'compensation[:\s]*([\d,\.]+)'
+    ]
+    salary = ""
+    for pattern in salary_patterns:
+        salary_match = re.search(pattern, text, re.IGNORECASE)
+        if salary_match:
+            salary = salary_match.group(1)
+            break
     
-    # NLP extraction
-    company_name = "Unknown"
-    role = "Unknown"
+    # Enhanced website extraction
+    website_patterns = [
+        r'www\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+        r'https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+        r'website[:\s]*([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})',
+        r'official\s+site[:\s]*([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+    ]
+    website = ""
+    for pattern in website_patterns:
+        website_match = re.search(pattern, text, re.IGNORECASE)
+        if website_match:
+            website = website_match.group(0) if pattern.startswith(('www', 'http')) else website_match.group(1)
+            if not website.startswith(('http', 'www')):
+                website = 'www.' + website
+            break
     
-    try:
-        doc = nlp(text)
-        organizations = [ent.text for ent in doc.ents if ent.label_ == "ORG"]
-        if organizations:
-            company_name = organizations[0]
-        
-        # Extract role patterns
-        role_patterns = [
-            r'(?:role|position)\s+(?:of|as)\s+([A-Za-z\s]+)',
-            r'hiring\s+(?:for|a)\s+([A-Za-z\s]+)',
-            r'(?:we are|looking for)\s+(?:a\s+)?([A-Za-z\s]+)'
-        ]
-        
-        for pattern in role_patterns:
-            role_match = re.search(pattern, text, re.IGNORECASE)
-            if role_match:
-                role = role_match.group(1).strip()
+    # Enhanced company name extraction
+    company_patterns = [
+        r'([A-Z][a-zA-Z\s&]+(?:Private\s+Limited|Ltd\.?|LLC|Inc\.?|Corp\.?|Corporation))',
+        r'([A-Z][a-zA-Z\s&]+(?:Technologies|Solutions|Systems|Services|Global))',
+        r'company[:\s]*([A-Z][a-zA-Z\s&]+)',
+        r'offer.*?from\s+([A-Z][a-zA-Z\s&]+)',
+        r'hiring.*?at\s+([A-Z][a-zA-Z\s&]+)'
+    ]
+    
+    for pattern in company_patterns:
+        company_match = re.search(pattern, text, re.IGNORECASE)
+        if company_match:
+            company_name = company_match.group(1).strip()
+            break
+    
+    # Fallback to NLP if regex fails
+    if company_name == "Unknown":
+        try:
+            doc = nlp(text)
+            organizations = [ent.text for ent in doc.ents if ent.label_ == "ORG"]
+            if organizations:
+                company_name = organizations[0]
+        except Exception as e:
+            print(f"NLP error: {e}")
+    
+    # Enhanced role extraction
+    role_patterns = [
+        r'(?:role|position)\s+(?:of|as)\s+([A-Za-z\s]+)',
+        r'hiring\s+(?:for|a)\s+([A-Za-z\s]+)',
+        r'(?:we are|looking for)\s+(?:a\s+)?([A-Za-z\s]+)',
+        r'position[:\s]*([A-Za-z\s]+)',
+        r'job[:\s]*([A-Za-z\s]+)'
+    ]
+    
+    for pattern in role_patterns:
+        role_match = re.search(pattern, text, re.IGNORECASE)
+        if role_match:
+            role = role_match.group(1).strip()
+            # Clean up role name
+            role = re.sub(r'\b(at|in|for|of|with)\b.*$', '', role, flags=re.IGNORECASE).strip()
+            if len(role) > 3:  # Ensure meaningful role name
                 break
-    except Exception as e:
-        print(f"NLP error: {e}")
     
     # OpenRouter AI Analysis
     ai_analysis = "AI analysis unavailable"
@@ -261,7 +338,7 @@ async def analyze_document_render(text: str, filename: str) -> dict:
             "hr_email": email,
             "salary": salary,
             "role": role,
-            "website": ""
+            "website": website
         },
         "reasons": ["Render optimized analysis with Google Vision"],
         "raw_text": text[:300] + "..." if len(text) > 300 else text,
