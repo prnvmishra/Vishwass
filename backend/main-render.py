@@ -17,10 +17,53 @@ import openai
 import spacy
 from google.cloud import vision
 
-# Web Search
+# Web Search & APIs
 import googlesearch
 from duckduckgo_search import DDGS
 import wikipedia
+
+# Email & Job Verification APIs
+async def check_email_ipqs_render(email: str) -> dict:
+    """IPQS email validation for Render"""
+    try:
+        ipqs_key = os.getenv("IPQS_API_KEY")
+        if not ipqs_key:
+            return {"valid": False, "reason": "IPQS API key not configured"}
+            
+        url = f"https://www.ipqualityscore.com/api/json/email/{ipqs_key}/{email}"
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(url)
+            return response.json()
+    except Exception as e:
+        print(f"IPQS Error: {e}")
+        return {"valid": False, "reason": "IPQS service unavailable"}
+
+async def check_linkedin_jobs_render(company_name: str, role: str) -> dict:
+    """LinkedIn jobs verification for Render"""
+    try:
+        rapidapi_key = os.getenv("RAPIDAPI_KEY")
+        if not rapidapi_key:
+            return {"has_jobs": False, "reason": "RapidAPI key not configured"}
+            
+        url = "https://jsearch.p.rapidapi.com/search"
+        querystring = {
+            "query": f"{role} at {company_name}", 
+            "page": "1", 
+            "num_pages": "1"
+        }
+        headers = {
+            "x-rapidapi-key": rapidapi_key,
+            "x-rapidapi-host": "jsearch.p.rapidapi.com"
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url, headers=headers, params=querystring)
+            if response.status_code == 200:
+                data = response.json()
+                jobs = data.get("data", [])
+                return {"has_jobs": len(jobs) > 0, "count": len(jobs)}
+    except Exception as e:
+        print(f"JSearch API Error: {e}")
+    return {"has_jobs": False, "reason": "Job search service unavailable"}
 
 app = FastAPI(title="VISHWAS - Render Free Tier API")
 
@@ -186,12 +229,26 @@ async def analyze_document_render(text: str, filename: str) -> dict:
         print(f"AI analysis error: {e}")
         ai_analysis = "AI analysis failed"
     
+    # Email validation with IPQS
+    ipqs_intel = None
+    if email:
+        ipqs_intel = await check_email_ipqs_render(email)
+    
+    # Job verification with RapidAPI
+    linkedin_jobs = None
+    if company_name != "Unknown" and role != "Unknown":
+        linkedin_jobs = await check_linkedin_jobs_render(company_name, role)
+    
     # Basic risk scoring
     if risk_score == 0:
         scam_phrases = ["registration fee", "urgent hiring", "limited seats", "pay to confirm"]
         if any(phrase in text.lower() for phrase in scam_phrases):
             risk_score += 40
         if "@gmail.com" in email or "@yahoo.com" in email:
+            risk_score += 20
+        if ipqs_intel and not ipqs_intel.get("valid", True):
+            risk_score += 30
+        if linkedin_jobs and not linkedin_jobs.get("has_jobs", False):
             risk_score += 20
     
     risk_level = "Low Risk" if risk_score < 40 else "Medium Risk" if risk_score < 70 else "High Risk"
@@ -210,8 +267,8 @@ async def analyze_document_render(text: str, filename: str) -> dict:
         "raw_text": text[:300] + "..." if len(text) > 300 else text,
         "llm_analysis": ai_analysis,
         "verified_links": {},
-        "ipqs_intel": None,
-        "linkedin_jobs": None
+        "ipqs_intel": ipqs_intel,
+        "linkedin_jobs": linkedin_jobs
     }
 
 # Company intelligence
