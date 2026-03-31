@@ -391,6 +391,19 @@ async def get_company_intelligence_render(name: str) -> dict:
     
     return intelligence
 
+@app.get("/debug")
+def debug_endpoint():
+    return {
+        "status": "Debug endpoint working",
+        "vision_client": "Available" if vision_client else "Not available",
+        "spacy_model": "Loaded" if 'nlp' in globals() else "Not loaded",
+        "env_vars": {
+            "OPENROUTER_API_KEY": "Set" if os.getenv("OPENROUTER_API_KEY") else "Not set",
+            "IPQS_API_KEY": "Set" if os.getenv("IPQS_API_KEY") else "Not set",
+            "RAPIDAPI_KEY": "Set" if os.getenv("RAPIDAPI_KEY") else "Not set"
+        }
+    }
+
 @app.get("/")
 def read_root():
     return {"status": "VISHWAS Render Free Tier Engine Running", "features": ["PDF", "Google Vision OCR", "AI", "NLP", "Web Search"]}
