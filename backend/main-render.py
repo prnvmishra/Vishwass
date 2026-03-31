@@ -183,6 +183,13 @@ def parse_document_render(file_bytes: bytes, filename: str) -> str:
 async def analyze_document_render(text: str, filename: str) -> dict:
     """Analysis optimized for Render free tier"""
     
+    # Initialize all variables at the start
+    company_name = "Unknown"
+    role = "Unknown" 
+    salary = ""
+    website = ""
+    email = ""
+    
     # Enhanced regex patterns for extraction
     email_match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
     all_emails = re.findall(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', text)
@@ -233,7 +240,6 @@ async def analyze_document_render(text: str, filename: str) -> dict:
             break
     
     # Enhanced company name extraction
-    company_name = "Unknown"  # Initialize company_name variable
     company_patterns = [
         r'([A-Z][a-zA-Z\s&]+(?:Private\s+Limited|Ltd\.?|LLC|Inc\.?|Corp\.?|Corporation))',
         r'([A-Z][a-zA-Z\s&]+(?:Technologies|Solutions|Systems|Services|Global))',
@@ -259,7 +265,6 @@ async def analyze_document_render(text: str, filename: str) -> dict:
             print(f"NLP error: {e}")
     
     # Enhanced role extraction
-    role = "Unknown"  # Initialize role variable
     role_patterns = [
         r'(?:role|position)\s+(?:of|as)\s+([A-Za-z\s]+)',
         r'hiring\s+(?:for|a)\s+([A-Za-z\s]+)',
